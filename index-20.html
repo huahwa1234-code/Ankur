@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>YAAD RAKH — GS Terminology Memory Trainer</title>
+<meta name="description" content="पढ़ो नहीं, याद करके देखो। GS terminology याद रखने के लिए Active Recall + Spaced Repetition trainer.">
+<meta name="theme-color" content="#2C3358">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ TOP APP BAR ============ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <span class="brand-mark">या</span>
+    <div class="brand-text">
+      <h1>YAAD RAKH</h1>
+      <p class="tagline">पढ़ो नहीं, याद करके देखो।</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="streak-chip" id="streakChip" title="Revision streak">🔥 <span id="streakCount">0</span></span>
+    <button class="icon-btn" id="themeToggleBtn" aria-label="थीम बदलें">🌙</button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- ============ HOME / DASHBOARD ============ -->
+  <section class="view" id="view-home">
+    <div class="stats-strip">
+      <div class="stat-pill"><span class="stat-num" id="statDue">0</span><span class="stat-label">Due Today</span></div>
+      <div class="stat-pill"><span class="stat-num" id="statWeak">0</span><span class="stat-label">Weak Terms</span></div>
+      <div class="stat-pill"><span class="stat-num" id="statMastered">0</span><span class="stat-label">Mastered</span></div>
+      <div class="stat-pill"><span class="stat-num" id="statTotal">0</span><span class="stat-label">Total Terms</span></div>
+    </div>
+
+    <button class="start-revision-btn" id="startRevisionBtn">
+      <span class="src-icon">🧠</span>
+      <span>
+        <strong>START REVISION</strong>
+        <small id="startRevisionSub">आज कोई revision due नहीं है</small>
+      </span>
+    </button>
+
+    <div class="dash-grid">
+      <button class="dash-card" data-nav="revision" data-mode="due">
+        <span class="dc-icon">🧠</span><span class="dc-title">आज की Revision</span>
+        <span class="dc-sub" id="dcDue">0 due</span>
+      </button>
+      <button class="dash-card" data-nav="revision" data-mode="weak">
+        <span class="dc-icon">🔴</span><span class="dc-title">Weak Terms</span>
+        <span class="dc-sub" id="dcWeak">0 weak</span>
+      </button>
+      <button class="dash-card" data-nav="add">
+        <span class="dc-icon">➕</span><span class="dc-title">Add Terminology</span>
+        <span class="dc-sub">नया term जोड़ें</span>
+      </button>
+      <button class="dash-card" data-nav="terms">
+        <span class="dc-icon">📚</span><span class="dc-title">All Terms</span>
+        <span class="dc-sub" id="dcTotal">0 terms</span>
+      </button>
+      <button class="dash-card" data-nav="progress">
+        <span class="dc-icon">📊</span><span class="dc-title">Progress</span>
+        <span class="dc-sub">आपकी growth</span>
+      </button>
+      <button class="dash-card" data-nav="revision" data-mode="confusion">
+        <span class="dc-icon">🔀</span><span class="dc-title">Confusing Terms</span>
+        <span class="dc-sub">Compare & clear</span>
+      </button>
+    </div>
+
+    <button class="random-btn" id="randomTermBtn">🎲 RANDOM TERM</button>
+  </section>
+
+  <!-- ============ ADD / EDIT TERM ============ -->
+  <section class="view" id="view-add">
+    <div class="view-header">
+      <h2 id="addFormTitle">नया Term जोड़ें</h2>
+      <button class="text-btn" id="quickAddToggle">Quick Add</button>
+    </div>
+
+    <form id="termForm" novalidate>
+      <input type="hidden" id="termId">
+
+      <div class="field">
+        <label for="fTerm">Term *</label>
+        <input type="text" id="fTerm" required placeholder="जैसे: El Niño">
+      </div>
+
+      <div class="field">
+        <label for="fHindi">Hindi Meaning *</label>
+        <textarea id="fHindi" rows="2" required placeholder="हिन्दी में अर्थ"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="fEnglish">English Meaning</label>
+        <textarea id="fEnglish" rows="2" placeholder="English meaning"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="fCategory">Category *</label>
+        <select id="fCategory" required>
+          <option value="History">History</option>
+          <option value="Geography">Geography</option>
+          <option value="Polity">Polity</option>
+          <option value="Economy">Economy</option>
+          <option value="Science">Science</option>
+          <option value="Environment">Environment</option>
+          <option value="Current Affairs">Current Affairs</option>
+          <option value="Miscellaneous">Miscellaneous</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="fMemoryHint">Memory Hint *</label>
+        <input type="text" id="fMemoryHint" required placeholder="जैसे: El Niño = गर्म">
+      </div>
+
+      <div class="field more-field">
+        <label for="fExplanation">Detailed Explanation</label>
+        <textarea id="fExplanation" rows="3" placeholder="विस्तृत व्याख्या"></textarea>
+      </div>
+
+      <div class="field-row more-field">
+        <div class="field">
+          <label for="fVisual">Visual Emoji / Symbol</label>
+          <input type="text" id="fVisual" placeholder="🌊🔥">
+        </div>
+        <div class="field">
+          <label for="fImageUrl">Image URL (optional)</label>
+          <input type="url" id="fImageUrl" placeholder="https://...">
+        </div>
+      </div>
+
+      <div class="field more-field">
+        <label for="fExample">Example</label>
+        <textarea id="fExample" rows="2" placeholder="उदाहरण"></textarea>
+      </div>
+
+      <div class="field more-field">
+        <label for="fConfusedWith">Confused With (comma से अलग करें)</label>
+        <input type="text" id="fConfusedWith" placeholder="जैसे: La Niña, ENSO">
+      </div>
+
+      <div class="field more-field">
+        <label for="fDifference">Important Difference</label>
+        <textarea id="fDifference" rows="2" placeholder="जैसे: El Niño = warming, La Niña = cooling"></textarea>
+      </div>
+
+      <div class="field more-field">
+        <label for="fExamNote">Important / Exam Note</label>
+        <textarea id="fExamNote" rows="2" placeholder="परीक्षा के लिए ज़रूरी बात"></textarea>
+      </div>
+
+      <div class="field more-field">
+        <label for="fTags">Tags (comma से अलग करें)</label>
+        <input type="text" id="fTags" placeholder="जैसे: climate, ocean">
+      </div>
+
+      <p class="form-msg" id="formMsg" role="status"></p>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-btn" id="saveTermBtn">SAVE TERM</button>
+        <button type="button" class="ghost-btn" id="cancelEditBtn" style="display:none;">Cancel Edit</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ============ ALL TERMS ============ -->
+  <section class="view" id="view-terms">
+    <div class="search-bar">
+      <input type="search" id="searchInput" placeholder="Search terminology...">
+    </div>
+    <div class="filter-row" id="filterRow">
+      <button class="filter-chip active" data-filter="All">All</button>
+      <button class="filter-chip" data-filter="Due Today">Due Today</button>
+      <button class="filter-chip" data-filter="Weak">Weak</button>
+      <button class="filter-chip" data-filter="Learning">Learning</button>
+      <button class="filter-chip" data-filter="Mastered">Mastered</button>
+      <button class="filter-chip" data-filter="History">History</button>
+      <button class="filter-chip" data-filter="Geography">Geography</button>
+      <button class="filter-chip" data-filter="Polity">Polity</button>
+      <button class="filter-chip" data-filter="Economy">Economy</button>
+      <button class="filter-chip" data-filter="Science">Science</button>
+      <button class="filter-chip" data-filter="Environment">Environment</button>
+      <button class="filter-chip" data-filter="Current Affairs">Current Affairs</button>
+      <button class="filter-chip" data-filter="Miscellaneous">Miscellaneous</button>
+    </div>
+    <div class="io-row">
+      <button class="io-btn" id="importBtn">📥 Import JSON</button>
+      <button class="io-btn" id="exportBtn">📤 Export Backup</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+    <div id="termsList" class="terms-list"></div>
+  </section>
+
+  <!-- ============ REVISION ============ -->
+  <section class="view" id="view-revision">
+    <div id="revisionEmpty" class="empty-state" style="display:none;">
+      <span class="empty-emoji">🎉</span>
+      <h3>अभी कुछ भी revise करने को नहीं है</h3>
+      <p>नए terms जोड़ें या बाद में वापस आएं।</p>
+    </div>
+
+    <div id="revisionRunner" style="display:none;">
+      <div class="rev-progress">
+        <div class="rev-progress-bar" id="revProgressBar"></div>
+      </div>
+      <p class="rev-count" id="revCount">1 / 10</p>
+
+      <div class="flash-card" id="flashCard">
+        <span class="fc-category" id="fcCategory">Geography</span>
+        <h2 class="fc-question" id="fcQuestion">EL NIÑO</h2>
+        <p class="fc-subquestion" id="fcSubQuestion">El Niño क्या है?</p>
+
+        <div id="mcqOptions" class="mcq-options" style="display:none;"></div>
+
+        <button class="reveal-btn" id="thinkBtn">THINK & ANSWER</button>
+
+        <div id="answerBox" class="answer-box" style="display:none;">
+          <div class="answer-main" id="answerMain"></div>
+          <div class="answer-extra" id="answerExtra"></div>
+          <button class="hint-btn" id="showHintBtn" style="display:none;">SHOW HINT 💡</button>
+          <div class="visual-hint" id="visualHint" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div id="showAnswerRow" class="reveal-row">
+        <button class="reveal-btn secondary" id="showAnswerBtn">SHOW ANSWER</button>
+      </div>
+
+      <div id="ratingRow" class="rating-row" style="display:none;">
+        <p class="rating-prompt">तुम्हें कितना याद था?</p>
+        <div class="rating-buttons">
+          <button class="rate-btn forgot" data-rate="0">🔴<span>भूल गया</span></button>
+          <button class="rate-btn hard" data-rate="1">🟠<span>थोड़ा याद था</span></button>
+          <button class="rate-btn almost" data-rate="2">🟡<span>लगभग सही</span></button>
+          <button class="rate-btn easy" data-rate="3">🟢<span>बिल्कुल सही</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div id="sessionComplete" class="session-complete" style="display:none;">
+      <span class="empty-emoji">🎉</span>
+      <h3>Session Complete</h3>
+      <div class="sc-stats">
+        <div><strong id="scCorrect">0</strong><span>Correct</span></div>
+        <div><strong id="scNeedsWork">0</strong><span>Needs Improvement</span></div>
+        <div><strong id="scRetention">0%</strong><span>Retention</span></div>
+        <div><strong id="scWeak">0</strong><span>Weak Terms</span></div>
+      </div>
+      <button class="primary-btn" id="backHomeBtn">Home पर जाएं</button>
+    </div>
+  </section>
+
+  <!-- ============ PROGRESS ============ -->
+  <section class="view" id="view-progress">
+    <div class="progress-summary">
+      <div class="ps-card"><strong id="pTotal">0</strong><span>Total Terms</span></div>
+      <div class="ps-card"><strong id="pMastered">0</strong><span>Mastered</span></div>
+      <div class="ps-card"><strong id="pLearning">0</strong><span>Learning</span></div>
+      <div class="ps-card"><strong id="pWeak">0</strong><span>Weak</span></div>
+      <div class="ps-card"><strong id="pDue">0</strong><span>Due Today</span></div>
+    </div>
+    <div class="streak-banner">🔥 <span id="pStreak">0</span> Day Streak</div>
+    <h3 class="section-title">Category-wise Progress</h3>
+    <div id="categoryBars" class="category-bars"></div>
+  </section>
+
+</main>
+
+<!-- ============ BOTTOM NAV ============ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-nav="home"><span>🏠</span>Home</button>
+  <button class="nav-btn" data-nav="revision"><span>🧠</span>Revision</button>
+  <button class="nav-btn" data-nav="add"><span>➕</span>Add</button>
+  <button class="nav-btn" data-nav="terms"><span>📚</span>Terms</button>
+  <button class="nav-btn" data-nav="progress"><span>📊</span>Progress</button>
+</nav>
+
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
