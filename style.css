@@ -191,6 +191,10 @@ main#app{max-width:560px;margin:0 auto;padding:16px;}
 .tc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
 .tc-title{font-family:var(--font-display);font-weight:600;font-size:15.5px;}
 .tc-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:var(--surface-2);color:var(--ink-soft);white-space:nowrap;}
+.leech-banner{
+  background:rgba(192,72,60,0.12);color:var(--weak);font-size:11.5px;font-weight:600;
+  border-radius:8px;padding:6px 9px;margin-top:6px;
+}
 .tc-meaning{font-size:13px;color:var(--ink-soft);margin:4px 0 6px;}
 .tc-meta{display:flex;gap:8px;font-size:11px;color:var(--ink-soft);flex-wrap:wrap;}
 .tc-cat{background:var(--surface-2);padding:2px 8px;border-radius:8px;}
