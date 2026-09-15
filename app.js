@@ -64,6 +64,33 @@ function shuffle(arr){
 }
 function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
+/* Interleaving: ek hi category ke terms ko lagataar na rakho — isse
+   confusing/similar terms ke beech gap aa jaata hai aur discrimination
+   better banti hai (mixing practice). */
+function interleaveByCategory(pool){
+  const groups = {};
+  shuffle(pool).forEach(t => {
+    (groups[t.category] = groups[t.category] || []).push(t);
+  });
+  const buckets = Object.values(groups);
+  const result = [];
+  let remaining = pool.length;
+  while(remaining > 0){
+    for(const bucket of buckets){
+      if(bucket.length){
+        result.push(bucket.shift());
+        remaining--;
+      }
+    }
+  }
+  return result;
+}
+function findTermByName(name){
+  if(!name) return null;
+  const n = name.trim().toLowerCase();
+  return state.terms.find(t => t.term.trim().toLowerCase() === n) || null;
+}
+
 /* =========================================================
    DATA LAYER (localStorage) — error-safe
    ========================================================= */
@@ -111,7 +138,7 @@ function makeTerm(t){
     createdAt: ts, lastReviewed: null, nextReview: ts,
     reviewCount: 0, correctCount: 0, wrongCount: 0,
     goodStreak: 0, wrongStreak: 0, hardStreak: 0,
-    status: 'NEW'
+    status: 'NEW', leech: false
   }, t);
 }
 function seedDemoData(){
@@ -177,6 +204,9 @@ function applySRS(term, rating){
     term.nextReview = addDays(ts, EASY_STEPS_DAYS[idx]);
   }
   term.status = computeStatus(term);
+  const wasLeech = term.leech;
+  term.leech = term.wrongCount >= 4;
+  term._justBecameLeech = !wasLeech && term.leech;
   return term;
 }
 
@@ -424,6 +454,7 @@ function renderTermsList(){
         <span class="tc-title">${t.visualEmoji ? t.visualEmoji + ' ' : ''}${escapeHtml(t.term)}</span>
         <span class="tc-badge">${t.status}</span>
       </div>
+      ${t.leech ? `<div class="leech-banner">🩹 बार-बार भूल रहे हैं — नया Memory Hint लिखने की कोशिश करें</div>` : ''}
       <p class="tc-meaning">${escapeHtml(t.hindiMeaning)}</p>
       <div class="tc-meta">
         <span class="tc-cat">${escapeHtml(t.category)}</span>
@@ -525,8 +556,10 @@ function startRevisionMode(mode){
   document.getElementById('revisionEmpty').style.display = 'none';
   document.getElementById('revisionRunner').style.display = 'block';
 
+  const ordered = (mode === 'confusion') ? shuffle(pool) : interleaveByCategory(pool);
+
   state.session = {
-    queue: shuffle(pool).map(t => t.id),
+    queue: ordered.map(t => t.id),
     mode,
     index: 0,
     correct: 0,
@@ -543,10 +576,36 @@ function currentTerm(){
 }
 
 function generateQuestion(term){
-  const forceType = state.session.mode === 'confusion' && (term.confusedWith||[]).length > 0 ? 'diff' : null;
+  const inConfusionMode = state.session.mode === 'confusion' && (term.confusedWith||[]).length > 0;
+  let forceType = null;
+  if(inConfusionMode){
+    forceType = Math.random() < 0.5 ? 'odd' : 'diff';
+    // odd-one-out ke liye kam se kam 1 sibling term database me hona chahiye
+    if(forceType === 'odd'){
+      const siblings = term.confusedWith.map(findTermByName).filter(Boolean);
+      if(siblings.length === 0) forceType = 'diff';
+    }
+  }
   const options = ['t2m','m2t','mcq'];
   if((term.confusedWith||[]).length > 0) options.push('diff');
   const type = forceType || pickRandom(options);
+
+  if(type === 'odd'){
+    const siblings = term.confusedWith.map(findTermByName).filter(Boolean);
+    const group = shuffle([term, ...siblings]).slice(0, 3);
+    const otherCatPool = state.terms.filter(t => t.category !== term.category && !group.includes(t));
+    const distractor = otherCatPool.length ? pickRandom(otherCatPool) : pickRandom(state.terms.filter(t => !group.includes(t)));
+    const oddOptions = shuffle([...group, distractor]);
+    return {
+      type: 'mcq', category: term.category,
+      big: group.map(t => t.visualEmoji || '❔').join('  '),
+      sub: 'इनमें से कौनसा term इस group से संबंधित नहीं है?',
+      options: oddOptions.map(t => t.term),
+      correctAnswer: distractor.term,
+      answerMain: `${distractor.term} अलग है — बाकी सब आपस में जुड़े/confuse होने वाले terms हैं।`,
+      answerExtra: (term.difference || buildExtra(term))
+    };
+  }
 
   if(type === 't2m'){
     return {
@@ -665,9 +724,15 @@ function rateCurrentCard(rating){
 
   bumpStreak();
 
+  const justBecameLeech = term._justBecameLeech;
+  term._justBecameLeech = false;
+
   state.session.index++;
   if(state.session.index >= state.session.queue.length){
     finishSession();
+  } else if(justBecameLeech){
+    toast(`⚠️ "${term.term}" 4 बार भूल चुके — Edit करके एक नया Memory Hint try करें`);
+    setTimeout(renderCard, 900);
   } else {
     renderCard();
   }
