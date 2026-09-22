@@ -137,6 +137,8 @@
         <div class="field">
           <label for="fImageUrl">Image URL (optional)</label>
           <input type="url" id="fImageUrl" placeholder="https://...">
+          <img id="fImagePreview" class="image-preview" style="display:none;" alt="preview">
+          <p class="field-hint" id="fImageHint" style="display:none;">⚠️ यह link से image load नहीं हो पाई — link check करें</p>
         </div>
       </div>
 
@@ -234,6 +236,7 @@
       </div>
 
       <div id="showAnswerRow" class="reveal-row">
+        <textarea id="recallBox" class="recall-box" rows="2" placeholder="अपने शब्दों में लिखें (optional) — फिर answer से मिलाएं..."></textarea>
         <button class="reveal-btn secondary" id="showAnswerBtn">SHOW ANSWER</button>
       </div>
 
@@ -270,7 +273,7 @@
       <div class="ps-card"><strong id="pWeak">0</strong><span>Weak</span></div>
       <div class="ps-card"><strong id="pDue">0</strong><span>Due Today</span></div>
     </div>
-    <div class="streak-banner">🔥 <span id="pStreak">0</span> Day Streak</div>
+    <div class="streak-banner">🔥 <span id="pStreak">0</span> Day Streak <span id="pFreeze" class="freeze-note"></span></div>
     <h3 class="section-title">Category-wise Progress</h3>
     <div id="categoryBars" class="category-bars"></div>
   </section>
