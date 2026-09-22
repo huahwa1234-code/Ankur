@@ -138,7 +138,7 @@ function makeTerm(t){
     createdAt: ts, lastReviewed: null, nextReview: ts,
     reviewCount: 0, correctCount: 0, wrongCount: 0,
     goodStreak: 0, wrongStreak: 0, hardStreak: 0,
-    status: 'NEW', leech: false
+    status: 'NEW', leech: false, lastQuestionType: null
   }, t);
 }
 function seedDemoData(){
@@ -326,6 +326,7 @@ function wireForm(){
     document.getElementById('quickAddToggle').textContent = state.quickAdd ? 'Full Form' : 'Quick Add';
   });
   document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
+  document.getElementById('fImageUrl').addEventListener('input', updateImagePreview);
 
   document.getElementById('termForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -362,6 +363,16 @@ function wireForm(){
     showView('terms');
   });
 }
+function updateImagePreview(){
+  const url = document.getElementById('fImageUrl').value.trim();
+  const img = document.getElementById('fImagePreview');
+  const hint = document.getElementById('fImageHint');
+  hint.style.display = 'none';
+  if(!url){ img.style.display = 'none'; img.src = ''; return; }
+  img.onload = () => { img.style.display = 'block'; };
+  img.onerror = () => { img.style.display = 'none'; hint.style.display = 'block'; };
+  img.src = url;
+}
 function resetForm(){
   document.getElementById('termForm').reset();
   document.getElementById('termId').value = '';
@@ -369,6 +380,7 @@ function resetForm(){
   document.getElementById('addFormTitle').textContent = 'नया Term जोड़ें';
   document.getElementById('cancelEditBtn').style.display = 'none';
   document.getElementById('formMsg').textContent = '';
+  updateImagePreview();
 }
 function editTerm(id){
   const t = state.terms.find(x => x.id === id);
@@ -388,6 +400,7 @@ function editTerm(id){
   document.getElementById('fDifference').value = t.difference;
   document.getElementById('fExamNote').value = t.examNote;
   document.getElementById('fTags').value = (t.tags || []).join(', ');
+  updateImagePreview();
 
   state.quickAdd = false;
   document.querySelectorAll('.more-field').forEach(f => f.style.display = 'block');
@@ -455,6 +468,7 @@ function renderTermsList(){
         <span class="tc-badge">${t.status}</span>
       </div>
       ${t.leech ? `<div class="leech-banner">🩹 बार-बार भूल रहे हैं — नया Memory Hint लिखने की कोशिश करें</div>` : ''}
+      ${t.imageUrl ? `<img src="${escapeHtml(t.imageUrl)}" class="tc-image" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
       <p class="tc-meaning">${escapeHtml(t.hindiMeaning)}</p>
       <div class="tc-meta">
         <span class="tc-cat">${escapeHtml(t.category)}</span>
@@ -588,7 +602,11 @@ function generateQuestion(term){
   }
   const options = ['t2m','m2t','mcq'];
   if((term.confusedWith||[]).length > 0) options.push('diff');
-  const type = forceType || pickRandom(options);
+  // Rotation: pichli baar jis tarike se poocha tha, is baar usse alag tarika try karo
+  // — isse ek hi term kai alag-alag tarikon se practice hota hai.
+  let pool = options.filter(o => o !== term.lastQuestionType);
+  if(pool.length === 0) pool = options;
+  const type = forceType || pickRandom(pool);
 
   if(type === 'odd'){
     const siblings = term.confusedWith.map(findTermByName).filter(Boolean);
@@ -597,7 +615,7 @@ function generateQuestion(term){
     const distractor = otherCatPool.length ? pickRandom(otherCatPool) : pickRandom(state.terms.filter(t => !group.includes(t)));
     const oddOptions = shuffle([...group, distractor]);
     return {
-      type: 'mcq', category: term.category,
+      type: 'mcq', kind: 'odd', category: term.category,
       big: group.map(t => t.visualEmoji || '❔').join('  '),
       sub: 'इनमें से कौनसा term इस group से संबंधित नहीं है?',
       options: oddOptions.map(t => t.term),
@@ -609,7 +627,7 @@ function generateQuestion(term){
 
   if(type === 't2m'){
     return {
-      type, category: term.category,
+      type, kind: type, category: term.category,
       big: (term.visualEmoji ? '' : '') + term.term,
       sub: `${term.term} क्या है?`,
       answerMain: term.hindiMeaning + (term.englishMeaning ? `<br><span style="color:var(--ink-soft);font-size:13px;">${escapeHtml(term.englishMeaning)}</span>` : ''),
@@ -618,7 +636,7 @@ function generateQuestion(term){
   }
   if(type === 'm2t'){
     return {
-      type, category: term.category,
+      type, kind: type, category: term.category,
       big: '❓',
       sub: `यह किस term से संबंधित है — "${term.hindiMeaning}"`,
       answerMain: term.term,
@@ -628,7 +646,7 @@ function generateQuestion(term){
   if(type === 'diff' && (term.confusedWith||[]).length){
     const other = term.confusedWith[0];
     return {
-      type, category: term.category,
+      type, kind: type, category: term.category,
       big: `${term.term} vs ${other}`,
       sub: `इन दोनों में मुख्य अंतर क्या है?`,
       answerMain: term.difference || term.hindiMeaning,
@@ -641,7 +659,7 @@ function generateQuestion(term){
   const distractors = shuffle(others).slice(0,3).map(t => t.term);
   const opts = shuffle([term.term, ...distractors]);
   return {
-    type: 'mcq', category: term.category,
+    type: 'mcq', kind: 'mcq', category: term.category,
     big: term.visualEmoji || '🔎',
     sub: term.hindiMeaning,
     options: opts,
@@ -673,9 +691,11 @@ function renderCard(){
 
   document.getElementById('answerBox').style.display = 'none';
   document.getElementById('ratingRow').style.display = 'none';
+  document.getElementById('recallBox').value = '';
   document.getElementById('visualHint').style.display = 'none';
-  document.getElementById('visualHint').textContent = term.visualEmoji || '';
-  document.getElementById('showHintBtn').style.display = term.visualEmoji ? 'inline-block' : 'none';
+  document.getElementById('visualHint').innerHTML = (term.visualEmoji ? `<div>${escapeHtml(term.visualEmoji)}</div>` : '') +
+    (term.imageUrl ? `<img src="${escapeHtml(term.imageUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '');
+  document.getElementById('showHintBtn').style.display = (term.visualEmoji || term.imageUrl) ? 'inline-block' : 'none';
 
   const mcqBox = document.getElementById('mcqOptions');
   mcqBox.innerHTML = '';
@@ -715,6 +735,7 @@ function revealAnswer(){
 
 function rateCurrentCard(rating){
   const term = currentTerm();
+  term.lastQuestionType = state.session.currentQuestion.kind || state.session.currentQuestion.type;
   applySRS(term, rating);
   saveTerms(state.terms);
 
@@ -751,11 +772,24 @@ function finishSession(){
 
 function bumpStreak(){
   const s = getStreak();
+  const oneDay = 86400000;
   const today = startOfDay(nowTs());
+  const weekNum = Math.floor(today / (7*oneDay));
+  if(s.freezeWeek !== weekNum){ s.freezes = 1; s.freezeWeek = weekNum; } // हर हफ्ते 1 नया freeze
+
   const last = s.lastDate ? startOfDay(s.lastDate) : null;
-  if(last === today) return; // already counted today
-  if(last === today - 86400000) s.count = (s.count || 0) + 1;
-  else s.count = 1;
+  if(last === today){ saveStreak(s); return; } // aaj already count ho chuka
+
+  if(last === today - oneDay){
+    s.count = (s.count || 0) + 1;
+  } else if(last === today - 2*oneDay && s.freezes > 0){
+    // 1 din miss hua, par freeze available hai — streak bachegi
+    s.count = (s.count || 0) + 1;
+    s.freezes--;
+    toast('🧊 Streak Freeze इस्तेमाल हुआ — streak बच गई!');
+  } else {
+    s.count = 1;
+  }
   s.lastDate = nowTs();
   saveStreak(s);
   refreshStreakChip();
@@ -777,6 +811,8 @@ function renderProgress(){
   document.getElementById('pWeak').textContent = weak;
   document.getElementById('pDue').textContent = due;
   document.getElementById('pStreak').textContent = getStreak().count || 0;
+  const freezeVal = getStreak().freezes ?? 1;
+  document.getElementById('pFreeze').textContent = `· 🧊 ${freezeVal} freeze बचा है`;
 
   const catBox = document.getElementById('categoryBars');
   catBox.innerHTML = CATEGORIES.map(cat => {
